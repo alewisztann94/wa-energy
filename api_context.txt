@@ -1,0 +1,183 @@
+# OpenElectricity API Context
+# Last Updated: 2024
+
+## Overview
+OpenElectricity provides electricity and energy network data for Australia.
+The API is currently in v4 and requires an API key (waitlisted at platform.openelectricity.org.au).
+
+## Base URL
+https://api.openelectricity.org.au/v4
+
+## Authentication
+- API key passed via Authorization header: `Authorization: Bearer {API_KEY}`
+- Keys obtained from: https://platform.openelectricity.org.au
+- Documentation: https://docs.openelectricity.org.au
+
+## Supported Networks
+- NEM: National Electricity Market (East coast Australia)
+- WEM: Western Australia Electricity Market
+- APVI: Australian PV Institute (solar data)
+- BoM: Bureau of Meteorology
+
+## Endpoints
+
+### 1. Network Data Endpoint
+GET /v4/data/network/{network_code}
+
+Purpose: Fetch network-level time series data for power, energy, emissions, market value.
+
+Parameters:
+- network_code: "NEM", "WEM", or "AU" (path parameter)
+- metrics: "power", "energy", "emissions" (query param, comma-separated)
+- interval: Time aggregation (query param, default: 5m)
+  Valid options: 5m, 1h, 1d, 7d, 1M, 3M, season, 1y, fy
+  NOTE: 30m is NOT a valid interval despite appearing in some docs
+- date_start: Timezone-NAIVE datetime in network local time (query param)
+  Format: "YYYY-MM-DDTHH:MM:SS" (e.g., "2024-01-01T00:00:00")
+  NOTE: Do NOT include timezone offset - API requires timezone-naive format
+- date_end: Timezone-NAIVE datetime in network local time (query param)
+  Format: "YYYY-MM-DDTHH:MM:SS" (e.g., "2024-01-31T23:59:59")
+- primaryGrouping: Data grouping option (query param)
+- secondary_grouping: "fueltech", "fueltech_group", "renewable" (query param)
+
+Example:
+GET /v4/data/network/WEM?metrics=energy&interval=1h&date_start=2024-01-01T00:00:00&date_end=2024-01-31T23:59:59&secondary_grouping=fueltech
+
+
+### 2. Market Data Endpoint
+GET /v4/market/network/{network_code}
+
+Purpose: Fetch market-related metrics like price, demand, curtailment.
+
+Parameters:
+- network_code: "NEM", "WEM", or "AU" (path parameter)
+- metrics: Market metric types (query param, comma-separated)
+  - Price/demand: "price", "demand", "demand_energy"
+  - Curtailment power (MW): "curtailment", "curtailment_solar_utility", "curtailment_wind"
+  - Curtailment energy (MWh): "curtailment_energy", "curtailment_solar_utility_energy", "curtailment_wind_energy"
+- interval: Time aggregation (query param, default: 5m)
+  Valid options: 5m, 1h, 1d, 7d, 1M, 3M, season, 1y, fy
+- date_start: Timezone-NAIVE datetime in network local time (query param)
+- date_end: Timezone-NAIVE datetime in network local time (query param)
+
+Example:
+GET /v4/market/network/WEM?metrics=price&interval=1h&date_start=2024-01-01T00:00:00&date_end=2024-01-31T23:59:59
+
+
+### 3. Facility Data Endpoint
+GET /v4/data/facility/{network_code}
+
+Purpose: Fetch facility-specific time series data.
+
+Parameters:
+- network_code: "NEM", "WEM", or "AU"
+- facility: Single facility code or array of facility codes
+- (similar time/metric params as network data)
+
+
+### 4. Facilities List
+GET /v4/facilities/
+
+Purpose: Get facility and unit information.
+
+
+### 5. User Info
+GET /v4/me
+
+Purpose: Get current authenticated user data.
+
+
+## Data Groupings (secondary_grouping options)
+- fueltech: All core fuel technologies (coal_black, coal_brown, gas_ccgt, gas_ocgt,
+            gas_steam, hydro, wind, solar_utility, solar_rooftop, battery_charging,
+            battery_discharging, pumps, distillate, bioenergy, etc.)
+- fueltech_group: Simplified groupings (coal, gas, hydro, wind, solar, battery, etc.)
+- renewable: Group by renewable vs non-renewable
+
+
+## API Limits (from original plan)
+- Hourly data: 32 days max per call
+- Strategy: Make monthly API calls (12 calls per metric type)
+- Expected records with 1h interval: ~8,760 per year (365 days × 24 hours/day)
+
+
+## Response Structure (ACTUAL - verified January 2024)
+
+The API returns data in this structure:
+{
+  "version": "4.4.5",
+  "created_at": "2026-01-19T16:48:49+11:00",
+  "success": true,
+  "error": null,
+  "data": [
+    {
+      "network_code": "WEM",
+      "metric": "energy",
+      "unit": "MWh",
+      "interval": "1h",
+      "date_start": "2024-01-01T00:00:00+08:00",
+      "date_end": "2024-01-31T23:00:00+08:00",
+      "groupings": [],
+      "results": [
+        {
+          "name": "energy_total",
+          "date_start": "2024-01-01T00:00:00+08:00",
+          "date_end": "2024-01-31T23:00:00+08:00",
+          "columns": {},
+          "data": [
+            ["2024-01-01T00:00:00+08:00", 2147.8278],
+            ["2024-01-01T01:00:00+08:00", 1829.1009],
+            ...
+          ]
+        }
+      ],
+      "network_timezone_offset": "+08:00"
+    }
+  ],
+  "total_records": null
+}
+
+Key points:
+- Data is in response.data[].results[].data
+- Each data entry is [timestamp, value] array pair
+- Timestamps include timezone offset (+08:00 for WEM)
+- "name" field indicates series (e.g., "energy_total", "price_total")
+- "unit" field shows measurement unit (MWh, $/MWh, etc.)
+
+
+## Client Libraries
+- Python: https://github.com/opennem/openelectricity-python
+  - pip install openelectricity
+  - Supports sync/async, Pandas/Polars DataFrames
+
+- TypeScript: https://github.com/opennem/openelectricity-typescript
+
+
+## WEM-Specific Notes
+- WEM = Western Australia Electricity Market
+- Operates separately from NEM (not interconnected)
+- Uses network_code "WEM" in all endpoints
+
+
+## Troubleshooting
+
+### 422 Unprocessable Entity
+- Check parameter names are camelCase (date_start not dateStart)
+- Verify endpoint path is correct (/data/network/ vs /market/network/)
+- Ensure metrics are valid for the endpoint type
+- Check date format is YYYY-MM-DD
+- Check interval is valid: 5m, 1h, 1d, 7d, 1M, 3M, season, 1y, fy (NOT 30m)
+
+### 401 Unauthorized
+- API key missing or invalid
+- Check Authorization header format: "Bearer {key}"
+
+### 429 Rate Limited
+- Add delays between requests (1 second recommended)
+- Reduce date range per request
+
+
+## Sources
+- https://docs.openelectricity.org.au
+- https://github.com/opennem/openelectricity-python
+- https://github.com/opennem/openelectricity-typescript

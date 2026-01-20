@@ -1,0 +1,4 @@
+i've had to dig through the api docs to debug claude codes script. it was pulling 2026 data, initially i thought it was the dates being in str format instead of ISO 8601. fixing that didn't change things. then we were feeding it timezone data +8 hours when the API requested timezone naive. so we removed that and it still pulled 2026.
+i then got chat gpt to manually construct a call to the API so we can check to ensure there is 2024 data.
+turns out claude code was using camel case instead of snake case for the date parameters. dateStart instead of date_start.
+we'll see if this latest iteration fixes it. 

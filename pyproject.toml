@@ -1,0 +1,21 @@
+[project]
+name = "wa-energy"
+version = "0.1.0"
+description = "WEM energy data collection and analysis for Western Australia"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "pandas>=2.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+collect-wem = "wa_energy.collect_wem_data:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wa_energy"]
