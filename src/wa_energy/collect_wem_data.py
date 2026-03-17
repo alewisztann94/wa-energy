@@ -261,7 +261,7 @@ def collect_demand_data() -> pd.DataFrame:
         print(f"Month {i}/12: {month_label}")
         try:
             response = fetch_market_data(
-                metrics=["demand"],
+                metrics=["demand"],  
                 date_start=start,
                 date_end=end,
             )

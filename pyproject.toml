@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 collect-wem = "wa_energy.collect_wem_data:main"
+test-api = "wa_energy.test_api:main"
 
 [build-system]
 requires = ["hatchling"]
